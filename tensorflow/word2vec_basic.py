@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[13]:
 
 
 import collections
@@ -16,7 +16,7 @@ from six.moves import xrange
 import tensorflow as tf
 
 
-# In[5]:
+# In[14]:
 
 
 #步骤1，下载数据
@@ -35,10 +35,10 @@ def maybe_download(filename, expected_bytes):
             'Failed to verify '+ filename + '.Can you get to it with a browser?')
     return filename
 
-#filename = maybe_download('text8.zip', 31344016)
+filename = maybe_download('text8.zip', 31344016)
 
 
-# In[6]:
+# In[15]:
 
 
 #将数据读入字符串列表。
@@ -52,7 +52,7 @@ vocabulary = read_data(filename)
 print('Data size', len(vocabulary))
 
 
-# In[8]:
+# In[16]:
 
 
 #步骤2：构建字典并使用UNK替换罕见单词
@@ -89,7 +89,7 @@ data_index = 0
     
 
 
-# In[13]:
+# In[17]:
 
 
 #步骤3：生成skip-gram 模型的训练批次的功能。
@@ -130,7 +130,7 @@ for i in range(8):
          '->', labels[i, 0], reversed_dictionary[labels[i,0]])
 
 
-# In[15]:
+# In[18]:
 
 
 #步骤4，构建并训练skip-gram模型
@@ -196,7 +196,7 @@ with graph.as_default():
     
 
 
-# In[20]:
+# In[19]:
 
 
 #步骤5，开始训练
@@ -232,7 +232,7 @@ with tf.Session(graph=graph) as session:
             for i in xrange(valid_size):
                 valid_word = reversed_dictionary[valid_examples[i]]
                 top_k = 8 
-                nearest = (-sim[i, :].argsort()[1:top_k + 1])
+                nearest = (-sim[i, :]).argsort()[1:top_k + 1]
                 log_str = 'Nearest to %s:' % valid_word
                 for k in xrange(top_k):
                     close_word = reversed_dictionary[nearest[k]]
@@ -240,6 +240,44 @@ with tf.Session(graph=graph) as session:
                 print(log_str)
     final_embeddings = normalized_embeddings.eval()                
         
+
+
+# In[21]:
+
+
+#步骤6：可视化
+
+#pylint: disable = missing-docstring
+#绘制嵌入距离的可视化功能。
+def plot_with_labels(low_dim_embs, labels, filename):
+    assert low_dim_embs.shape[0] >= len(labels), 'More labels than embeddings'
+    plt.figure(figsize=(18, 18))
+    for i, label in enumerate(labels):
+        x, y = low_dim_embs[i, :]
+        plt.scatter(x, y)
+        plt.annotate(label,
+                    xy=(x, y),
+                    xytext=(5,2),
+                    textcoords='offset points',
+                    ha='right',
+                    va='bottom')
+    plt.savefig(filename)
+    
+try:
+    #pyint: disable=g-import-not-at-top
+    from sklearn.manifold import TSNE
+    import matplotlib.pyplot as plt
+    
+    tsne = TSNE(perplexity=30, n_components=2,
+               init='pca',n_iter=5000,method='exact')
+    plot_only = 500
+    low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
+    labels = [reversed_dictionary[i] for i in xrange(plot_only)]
+    plot_with_labels(low_dim_embs, labels, os.path.join('', 'tsne.png'))
+    
+except ImportError as ex:
+    print('Please install sklearn, matplotlib, and scipy to show embeddings.')
+    print(ex)
 
 
 # In[ ]:
